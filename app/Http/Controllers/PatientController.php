@@ -53,7 +53,7 @@ class PatientController extends Controller
                                 ->lockForUpdate()
                                 ->first();
 
-            if (!$patients) {
+            if (! $patients ) {
                 return response()->json([
                     "error"   => true,
                     "message" => "Paciente não encontrado."
