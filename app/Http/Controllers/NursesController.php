@@ -7,12 +7,15 @@ use Exception;
 use App\Models\Address;
 use App\Models\Nurses;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class NursesController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
@@ -30,14 +33,15 @@ class NursesController extends Controller
             $user = Auth::user();
 
             $address = $this->getUserAddress($request->user_id);
-            $profile = $this->getUserProfile($user->id);
 
-            if($profile?->profile_id !== 3) {
+            if (!$address) {
                 return response()->json([
                     "error" => true,
-                    "message" => "Você não tem permissão para realizar o registro"
-                ], 500);
+                    "message" => "Endereço não encontrado para o usuário informado."
+                ], 404);
             }
+
+            $this->authorize('manage', Nurses::class);
 
             Nurses::create([
                 "user_id" => $request->user_id,
@@ -52,13 +56,13 @@ class NursesController extends Controller
                 "active" => true,
             ]);
 
-            Log::info("O usuario" . $user->id . " se registrou com enfermeiro");
+            Log::info("O usuário {$user->id} registrou um enfermeiro");
             return response()->json([
                 "error" => false,
                 "message" => "Conta criada com sucesso!",
-            ], 200);
+            ], 201);
         } catch (Exception $e) {
-            Log::error("Error" . $e->getMessage());
+            Log::error("Erro ao registrar enfermeiro: " . $e->getMessage());
             return response()->json([
                 "error" => true,
                 "message" => "Erro ao criar a conta. Tente novamente"
@@ -85,25 +89,116 @@ class NursesController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(NurseRequest $request)
     {
-        //
+        try {
+            $user = Auth::user();
+
+            $address = $this->getUserAddress($request->user_id);
+
+            if (!$address) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Endereço não encontrado para o usuário informado."
+                ], 404);
+            }
+
+            $this->authorize('manage', Nurses::class);
+
+
+            $nurses = Nurses::where("user_id", $request->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $nurses) {
+                return response()->json([
+                    "error"   => true,
+                    "message" => "Enfermeiro não encontrado."
+                ], 404);
+            }
+
+
+            $nurses->update([
+                "first_name" => $request->first_name,
+                "last_name" => $request->last_name,
+                "specialtie_id" => $request->specialtie,
+                "cpf" => $request->cpf,
+                "address_id" => $address?->id,
+                "coren" => $request->coren,
+                "phone_number" => $request->phone_number,
+                "date_birth" => $request->date_birth,
+            ]);
+
+            Log::info("O usuário {$user->id} atualizou o registro de enfermeiro");
+            return response()->json([
+                "error" => false,
+                "message" => "Conta atualizada com sucesso!",
+            ], 200);
+        } catch (Exception $e) {
+            Log::error("Erro ao atualizar enfermeiro: " . $e->getMessage());
+            return response()->json([
+                "error" => true,
+                "message" => "Erro ao atualizar a conta. Tente novamente"
+            ], 500);
+        }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function disable(Request $request)
     {
-        //
+        try {
+
+            $request->validate(
+                [
+                    "user_id" => "required",
+                    "termination_date" => "required|date",
+                ],
+                [
+                    "user_id.required" => "Precisa informar o id do usuário.",
+                    "termination_date.required" => "Precisa informar a data de desligamento.",
+                    "termination_date.date" => "Precisa ser uma data válida!",
+                ]
+            );
+
+            $user = Auth::user();
+
+            $this->authorize('manage', Nurses::class);
+
+
+            $nurse = Nurses::where("user_id", $request->user_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $nurse) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Enfermeiro não encontrado."
+                ], 404);
+            }
+
+            $nurse->update([
+                "termination_date" => $request->termination_date,
+                "active" => false,
+            ]);
+
+            Log::info("O usuário {$user->id} desativou o registro de enfermeiro");
+            return response()->json([
+                "error" => false,
+                "message" => "Enfermeiro desligado com sucesso!",
+            ], 200);
+        } catch (Exception $e) {
+            Log::error("Erro ao desativar enfermeiro: " . $e->getMessage());
+            return response()->json([
+                "error" => true,
+                "message" => "Erro interno. Tente novamente",
+            ], 500);
+        }
     }
 
     private function getUserAddress($user_id)
     {
         return Address::where("user_id", $user_id)->first();
-    }
-    private function getUserProfile($user_id)
-    {
-        return User::where("id", $user_id)->first();
     }
 }
