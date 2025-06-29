@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Models\User;
-use App\Http\Requests\Auth;
+use App\Http\Requests\AuthRequest;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Auth $request)
+    public function register(AuthRequest $request)
     {
         try {
             User::create([
@@ -45,7 +45,13 @@ class AuthController extends Controller
 
             $user = User::where('email', $request->email)->first();
 
-            if (! $user || ! Hash::check($request->password, $user->password)) {
+            if (! $user) {
+                throw ValidationException::withMessages([
+                    'email' => ['As credenciais fornecidas estão incorretas.'],
+                ]);
+            }
+
+            if (! Hash::check($request->password, $user?->password)) {
                 throw ValidationException::withMessages([
                     'email' => ['As credenciais fornecidas estão incorretas.'],
                 ]);
