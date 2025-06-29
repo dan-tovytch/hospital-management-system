@@ -22,5 +22,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix("nurses")->group(function () {
         Route::post("register", [NursesController::class, 'store'])->name("nurse.register");
         Route::put("update", [NursesController::class, 'update'])->name("nurse.update");
+        Route::put("disable", [NursesController::class, 'disable']);
     });
 });
