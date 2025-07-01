@@ -17,9 +17,9 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users')->onDelete('restrict');
             $table->string("first_name", 255);
             $table->string("last_name", 255);
-            $table->string("cpf", 16);
-            $table->foreignId("address_id")->references("id")->on("address")->onDelete('restrict');
-            $table->string("phone_number");
+            $table->string("cpf", 16)->unique()->index();
+            $table->foreignId("address_id")->nullable()->references("id")->on("address")->onDelete('restrict');
+            $table->string("phone_number")->unique()->index();
             $table->date("date_birth");
             $table->boolean('active')->default(true);
             $table->timestamps();
