@@ -37,7 +37,7 @@ class AuthRequest extends FormRequest
             'email.required'    => "Precisa informar um email válido!",
             'email.unique'      => "Email já cadastrado, por favor tente novamente",
             'password.required' => "Precisa informar uma senha!",
-            'password.min'      => "A senha precisa ter no minímo 8 caracters",
+            'password.min'      => "A senha precisa ter no minímo 8 caracteres",
             'password.regex'    => 'A senha precisa conter ao menos uma letra maiúscula, uma minúscula, um número e um caractere especial.',
         ];
     }
