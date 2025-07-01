@@ -24,10 +24,10 @@ return new class extends Migration
             $table->string("first_name", 255);
             $table->string("last_name", 255);
             $table->foreignId("specialtie_id")->references("id")->on("specialties")->onDelete("restrict");
-            $table->string("cpf", 16);
-            $table->foreignId("address_id")->references("id")->on("address")->onDelete('restrict');
-            $table->string("coren");
-            $table->string("phone_number");
+            $table->string("cpf", 16)->unique()->index();
+            $table->foreignId("address_id")->nullable()->references("id")->on("address")->onDelete('restrict');
+            $table->string("coren")->unique()->index();
+            $table->string("phone_number")->unique()->index();
             $table->date("date_birth");
             $table->timestamps();
             $table->date("termination_date")->nullable();
