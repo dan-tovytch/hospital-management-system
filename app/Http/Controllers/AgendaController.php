@@ -159,7 +159,7 @@ class AgendaController extends Controller
                 return response()->json([
                     "error" => true,
                     "message" => "Nenhuma agenda encontrado em seu registro."
-                ], 404);
+                ], 200);
             }
 
 
