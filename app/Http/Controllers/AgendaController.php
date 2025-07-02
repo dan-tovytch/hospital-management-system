@@ -131,4 +131,57 @@ class AgendaController extends Controller
             ], 500);
         }
     }
+
+    public function myAgenda()
+    {
+        try {
+            $user = Auth::user();
+
+            if(! $user) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Usuário não autenticado."
+                ], 401);
+            }
+
+            $nurse = Nurses::where("user_id", $user->id)->first();
+
+            if(! $nurse) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Enfermeiro não encontrado"
+                ], 404);
+            }
+
+            $agenda = Agenda::where("nurses_id", $nurse?->id)->get();
+
+            if($agenda->isEmpty()) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Nenhuma agenda encontrado em seu registro."
+                ], 404);
+            }
+
+
+            Log::info("[AgendaController][myAgenda] o usuário {$user->id} exibiu sua agenda");
+            return response()->json([
+                "error" => false,
+                "message" => "Sucesso",
+                "data" => $agenda,
+            ], 200);
+
+        } catch(Exception $e) {
+            Log::error("Erro ao exibir a agenda: {$e->getMessage()}");
+            return response()->json([
+                "error" => true,
+                "message" => "Erro interno. Tente novamente"
+            ], 500);
+        }
+    }
+
+    public function listAgenda() {
+        return response()->json([
+            "horários" => Agenda::all()
+        ]);
+    }
 }
