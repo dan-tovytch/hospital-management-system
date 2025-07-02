@@ -46,20 +46,21 @@ class AgendaController extends Controller
 
             $validated = $request->validated();
             $daysWeek = isArray($validated['days_week'] ?? null) ? $validated['days_week'] : [];
+            DB::transaction(function () use ($daysWeek, $nurse) {
+                foreach ($daysWeek as $schedule) {
+                    $dayNumber  = $schedule["day"];
+                    $start      = $schedule["start"];
+                    $end        = $schedule["end"];
 
-            foreach ($daysWeek as $schedule) {
-                $dayNumber  = $schedule["day"];
-                $start      = $schedule["start"];
-                $end        = $schedule["end"];
-
-                Agenda::create([
-                    "nurses_id" => $nurse?->id,
-                    "days_week" => $dayNumber,
-                    "start_time" => $start,
-                    "end_time" => $end,
-                    "active" => true,
-                ]);
-            }
+                    Agenda::create([
+                        "nurses_id" => $nurse?->id,
+                        "days_week" => $dayNumber,
+                        "start_time" => $start,
+                        "end_time" => $end,
+                        "active" => true,
+                    ]);
+                }
+            });
 
             Log::info("[AgendaController][dailyAgenda] Usuário {$nurse?->id} criou sua agenda");
             return response()->json([
