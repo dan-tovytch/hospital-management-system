@@ -37,5 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix("agenda")->group(function () {
         Route::post("create", [AgendaController::class, 'dailyAgenda'])->name("agenda.create");
         Route::put("update", [AgendaController::class, 'update'])->name("agenda.create");
+        Route::get("myagenda", [AgendaController::class, 'myAgenda'])->name("agenda.myagenda");
+        Route::get("list", [AgendaController::class, 'listAgenda'])->name("agenda.list");
     });
 });
