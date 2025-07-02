@@ -11,8 +11,6 @@ use App\Http\Requests\DailyAgendaRequest;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
-use function PHPUnit\Framework\isArray;
-
 class AgendaController extends Controller
 {
     public function dailyAgenda(DailyAgendaRequest $request)
@@ -45,7 +43,7 @@ class AgendaController extends Controller
             }
 
             $validated = $request->validated();
-            $daysWeek = isArray($validated['days_week'] ?? null) ? $validated['days_week'] : [];
+            $daysWeek = is_array($validated['days_week'] ?? null) ? $validated['days_week'] : [];
             DB::transaction(function () use ($daysWeek, $nurse) {
                 foreach ($daysWeek as $schedule) {
                     $dayNumber  = $schedule["day"];
@@ -96,16 +94,24 @@ class AgendaController extends Controller
                     'message' => 'Enfermeiro não encontrado.'
                 ], 404);
             }
+
+            if (!Agenda::where('nurses_id', $nurse->id)->exists()) {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Nenhuma agenda cadastrada ainda, cadastre primeiro.'
+                ], 422);
+            }
             $validated = $request->validated();
-            $daysWeek = isArray($validated['days_week'] ?? null) ? $validated['days_week'] : [];
+            $daysWeek = is_array($validated['days_week'] ?? null) ? $validated['days_week'] : [];
             DB::transaction(function () use ($daysWeek, $nurse) {
                 foreach ($daysWeek as $item) {
-                    Agenda::where('id', $item['id'])
+                    Agenda::where("id", $item["id"])
                         ->where('nurses_id', $nurse->id)
                         ->update([
                             'days_week' => $item['day'],
                             'start_time' => $item['start'],
                             'end_time' => $item['end'],
+                            'active' => $item['active'],
                         ]);
                 }
             });
