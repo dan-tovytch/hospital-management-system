@@ -27,6 +27,9 @@ return new class extends Migration
             $table->foreignId("patients_id")->references("id")->on("patients")->onDelete('restrict');
             $table->dateTime("date");
             $table->integer("query_type");
+            $table->unique(['nurses_id', 'date']);
+            $table->index('patients_id');
+            $table->index('nurses_id');
             $table->timestamps();
         });
 
