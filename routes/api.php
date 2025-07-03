@@ -40,4 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get("myagenda", [AgendaController::class, 'myAgenda'])->name("agenda.myagenda");
         Route::get("list", [AgendaController::class, 'listAgenda'])->name("agenda.list");
     });
+
+    Route::prefix("queries")->group(function () {
+        Route::post("schedule", [QueriesController::class, 'schedule'])->name("queries.schedule");
+    });
 });
