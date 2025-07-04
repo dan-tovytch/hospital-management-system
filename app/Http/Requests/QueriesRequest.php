@@ -22,7 +22,6 @@ class QueriesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "patients_id" => "required|integer|exists:patients,id",
             "nurses_id" => "required|integer|exists:nurses,id",
             "date" => "required|date",
             "hour" => "required|date_format:H:i",
@@ -33,8 +32,6 @@ class QueriesRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'patients_id.required' => 'O campo paciente é obrigatório.',
-            'patients_id.exists' => 'O paciente não existe.',
             'nurses_id.required' => 'O campo enfermeiro é obrigatório.',
             'nurses_id.exists' => 'O enfermeiro não existe.',
             'date.required' => 'O campo data é obrigatório.',
