@@ -43,5 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix("queries")->group(function () {
         Route::post("schedule", [QueriesController::class, 'schedule'])->name("queries.schedule");
+        Route::get("list", [QueriesController::class, 'list'])->name("queries.list");
+        Route::put("postpone", [QueriesController::class, 'postpone'])->name("queries.postpone");
+        Route::delete("cancel", [QueriesController::class, 'cancel'])->name("queries.cancel");
     });
 });
