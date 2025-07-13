@@ -50,7 +50,7 @@ class PatientTest extends TestCase
         ]);
     }
 
-    public function test_update_user_patient() {
-        
-    }
+    // public function test_update_user_patient() {
+
+    // }
 }
