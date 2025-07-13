@@ -35,7 +35,22 @@ return new class extends Migration
 
         Schema::create("medical_records", function (Blueprint $table) {
             $table->id();
-            $table->foreignId("querie_id")->references("id")->on("queries")->onDelete('restrict');
+            $table->foreignId("querie_id")
+                ->references("id")
+                ->on('queries')
+                ->restrictOnDelete();
+            $table->foreignId("patient_id")
+                ->references("id")
+                ->on("patients")
+                ->restrictOnDelete();
+            $table->foreignId("nurse_id")
+                ->references("id")
+                ->on("nurses")
+                ->restrictOnDelete();
+            $table->string("diagnosis")->nullable();
+            $table->text("prescriptions")->nullable();
+            $table->text("obs")->nullable();
+            $table->timestamps();
         });
     }
 

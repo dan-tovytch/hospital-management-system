@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('email')->unique()->index();
             $table->string('password');
             $table->timestamp('email_verified_at')->nullable();
-            $table->foreignId('profile_id')->constrained('profiles')->onDelete('restrict');
+            $table->foreignId('profile_id')->default(1)->constrained('profiles')->onDelete('restrict');
             $table->boolean('active')->default(true);
             $table->dateTime('last_login')->nullable();
             $table->integer('login_attempts')->nullable();
