@@ -2,54 +2,81 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\NurseRequest;
 use Exception;
-use App\Models\Address;
 use App\Models\Nurses;
-use App\Models\User;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Models\Address;
+use App\Models\Queries;
+use App\Models\Patients;
 use Illuminate\Http\Request;
+use App\Models\MedicalRecords;
+use App\Http\Requests\NurseRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
+use App\Http\Requests\MedicalRecordRequest;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class NursesController extends Controller
 {
     use AuthorizesRequests;
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index()
     {
-        //
+        try {
+            $user = Auth::user();
+
+            $this->authorize('manage', Nurses::class);
+
+            $nurses = Nurses::all();
+
+            Log::info("[AdminController][listNurses] O usuário {$user->id} listou os enfermeiros registrados");
+            return response()->json([
+                "error" => false,
+                "message" => "Sucesso!",
+                "data" => $nurses,
+            ], 200);
+        } catch (Exception $e) {
+            Log::error("Erro ao listar os enfermeiros ERROR: {$e->getMessage()}");
+            return response()->json([
+                "error" => true,
+                "message" => "Erro interno. Tente novamente"
+            ]);
+        }
     }
 
+
     /**
-     * Store a newly created resource in storage.
+     * Cria um novo registro de enfermeiro.
+     *
+     * @param \App\Http\Requests\NurseRequest $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(NurseRequest $request)
     {
         try {
             $user = Auth::user();
 
-            $address = $this->getUserAddress($request->user_id);
+            $this->authorize('manage', Nurses::class);
 
-            if (!$address) {
+            $cpf = $request->cpf;
+            $cpfHash = hash('sha256', $cpf);
+
+            if (Nurses::where('cpf_hash', $cpfHash)->exists()) {
                 return response()->json([
                     "error" => true,
-                    "message" => "Endereço não encontrado para o usuário informado."
-                ], 404);
+                    "message" => "Já existe um enfermeiro cadastrado com esse CPF."
+                ], 422);
             }
 
-            $this->authorize('manage', Nurses::class);
+            $encryptedCpf = Crypt::encryptString($cpf);
 
             Nurses::create([
                 "user_id" => $request->user_id,
                 "first_name" => $request->first_name,
                 "last_name" => $request->last_name,
                 "specialtie_id" => $request->specialtie,
-                "cpf" => $request->cpf,
-                "address_id" => $address?->id,
+                "cpf" => $encryptedCpf,
+                "cpf_hash" => $cpfHash,
                 "coren" => $request->coren,
                 "phone_number" => $request->phone_number,
                 "date_birth" => $request->date_birth,
@@ -71,23 +98,10 @@ class NursesController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * Atualiza os dados de um registro de enfermeiro existente.
+     *
+     * @param \App\Http\Requests\NurseRequest $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(NurseRequest $request)
     {
@@ -104,7 +118,6 @@ class NursesController extends Controller
             }
 
             $this->authorize('manage', Nurses::class);
-
 
             $nurses = Nurses::where("user_id", $request->user_id)
                 ->lockForUpdate()
@@ -144,7 +157,11 @@ class NursesController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Desativa (desliga) um registro de enfermeiro, marcando-o
+     * como inativo e registrando a data de desligamento.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function disable(Request $request)
     {
@@ -197,8 +214,69 @@ class NursesController extends Controller
         }
     }
 
+
+    public function medicalRecord(MedicalRecordRequest $request)
+    {
+        try {
+            $user = Auth::user();
+            $nurse = $this->getNurse($user->id);
+
+            if (! $nurse) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Enfermeiro não encontrado."
+                ], 404);
+            }
+
+            $patient = Patients::find($request->patient_id);
+            if (! $patient) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Paciente não encontrado."
+                ], 404);
+            }
+
+            $querie = Queries::find($request->querie_id);
+            if (! $querie) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Consulta não encontrada nos registros."
+                ], 404);
+            }
+
+            $medicalRecord = MedicalRecords::create([
+                "querie_id" => $querie->id,
+                "patient_id" => $patient->id,
+                "nurse_id" => $nurse->id,
+                "diagnosis" => $request->diagnosis,
+                "prescriptions" => $request->prescriptions,
+                "obs" => $request->obs,
+            ]);
+
+            Log::info("[NursesController][medicalRecord] O usuário {$user->id} criou um prontuário {$medicalRecord->id} para o paciente {$patient->user_id}");
+
+            return response()->json([
+                "error" => false,
+                "message" => "Prontuário criado com sucesso.",
+                "data" => $medicalRecord,
+            ], 200);
+        } catch (Exception $e) {
+            Log::error("Erro ao criar o prontuário do usuário {$user->id}: {$e->getMessage()}");
+            return response()->json([
+                "error" => true,
+                "message" => "Erro interno. Tente novamente",
+            ], 500);
+        }
+    }
+
+
     private function getUserAddress($user_id)
     {
         return Address::where("user_id", $user_id)->first();
+    }
+
+    private function getNurse($user_id)
+    {
+        return Nurses::where("user_id", $user_id)->first();
     }
 }
