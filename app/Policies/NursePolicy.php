@@ -10,6 +10,8 @@ class NursePolicy
     // policy: somente usuários com profile_id 3 podem gerenciar qualquer registro de enfermeiro
     public function manage(User $user)
     {
-        return $user->profile_id == 3;
+        return $user->profile_id == 3
+            ? Response::allow()
+            : Response::deny('Você não tem permissão para gerenciar registros de enfermeiros.');
     }
 }
