@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Exception;
 use App\Models\Agenda;
 use App\Models\Nurses;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,39 @@ use Carbon\Carbon;
 
 class QueriesController extends Controller
 {
+
+    use AuthorizesRequests;
+
+    public function index()
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Usuário não autenticado."
+                ], 401);
+            }
+
+            $this->authorize("manage", Nurses::class);
+
+            $queries = Queries::paginate(10);
+
+            Log::info("[AddressController][index] O usuário {$user->id} listou as consultas.");
+            return response()->json([
+                "error" => false,
+                "message" => "sucesso!",
+                "data" => $queries,
+            ]);
+        } catch (Exception $e) {
+            Log::error("Erro ao puxar a lista de consultas. ERROR: {$e->getMessage()}");
+            return response()->json([
+                "error" => true,
+                "message" => "Erro interno. Tente novamente",
+            ], 500);
+        }
+    }
 
     public function schedule(QueriesRequest $request)
     {
@@ -28,7 +62,7 @@ class QueriesController extends Controller
                 ], 403);
             }
 
-            $patient = $this->patient($user->id);
+            $patient = $this->getPatientByUserId($user->id);
 
             if (! $patient) {
                 return response()->json([
@@ -59,7 +93,14 @@ class QueriesController extends Controller
                 ], 404);
             }
 
-            $fullDate = Carbon::parse($request->date . ' ' . $request->hour)->format('Y-m-d H:i:s');
+            if (Carbon::parse($request->date)->isPast()) {
+                return response()->json([
+                    "error" => true,
+                    "message" => "Não é possível agendar uma consulta em data passada."
+                ], 422);
+            }
+
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', "{$request->date} {$request->hour}")->toDateTimeString();
 
             $existingQuery = Queries::where("nurses_id", $nurse->id)
                 ->where("date", $fullDate)
@@ -103,7 +144,7 @@ class QueriesController extends Controller
                 "id" => "required|integer"
             ]);
 
-            $patient = $this->patient($user->id);
+            $patient = $this->getPatientByUserId($user->id);
 
             if (! $patient) {
                 return response()->json([
@@ -137,7 +178,7 @@ class QueriesController extends Controller
             return response()->json([
                 "error" => true,
                 "message" => "Erro interno. Tente novamente"
-            ]);
+            ], 500);
         }
     }
 
@@ -156,7 +197,7 @@ class QueriesController extends Controller
                 "hour.date_format" => "Formato de hora inválido (HH:mm)."
             ]);
 
-            $patient = $this->patient($user->id);
+            $patient = $this->getPatientByUserId($user->id);
 
             if (! $patient) {
                 return response()->json([
@@ -199,7 +240,7 @@ class QueriesController extends Controller
                 ], 404);
             }
 
-            $fullDate = Carbon::parse($request->date . ' ' . $request->hour)->format('Y-m-d H:i:s');
+            $fullDate = Carbon::createFromFormat('Y-m-d H:i', "{$request->date} {$request->hour}")->toDateTimeString();
 
             $conflict = Queries::where("nurses_id", $nurse->id)
                 ->where("date", $fullDate)
@@ -240,7 +281,7 @@ class QueriesController extends Controller
 
             $user = Auth::user();
 
-            $patient = $this->patient($user->id);
+            $patient = $this->getPatientByUserId($user->id);
 
             if (! $patient) {
                 return response()->json([
@@ -264,7 +305,7 @@ class QueriesController extends Controller
                 "error" => false,
                 "message" => "Você tem consulta marcada:",
                 "data" => $query,
-            ]);
+            ], 200);
         } catch (Exception $e) {
             Log::error("[QueriesController][list] Erro: {$e->getMessage()}", [
                 'exception' => $e
@@ -272,11 +313,11 @@ class QueriesController extends Controller
             return response()->json([
                 "error" => true,
                 "message" => "Erro interno. tente novamente"
-            ]);
+            ], 500);
         }
     }
 
-    private function patient($user)
+    private function getPatientByUserId($user)
     {
         return Patients::where("user_id", $user)->first();
     }
