@@ -14,6 +14,7 @@ class Nurses extends Model
         "last_name",
         "specialtie_id",
         "cpf",
+        "cpf_hash",
         "address_id",
         "coren",
         "phone_number",
