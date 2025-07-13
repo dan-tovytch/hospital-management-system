@@ -19,7 +19,7 @@ class AuthController extends Controller
             User::create([
                 'id' => Str::uuid(),
                 'email' => $request->email,
-                'password' => bcrypt($request->password),
+                'password' => Hash::make($request->password),
                 'profile_id' => 1,
             ]);
             Log::info('Novo registro', ['message' => 'Novo usuario registrado']);
@@ -47,13 +47,13 @@ class AuthController extends Controller
 
             if (! $user) {
                 throw ValidationException::withMessages([
-                    'email' => ['As credenciais fornecidas estão incorretas.'],
+                    'email' => [' As credenciais fornecidas estão incorretas.'],
                 ]);
             }
 
             if (! Hash::check($request->password, $user?->password)) {
                 throw ValidationException::withMessages([
-                    'email' => ['As credenciais fornecidas estão incorretas.'],
+                    'password' => [' As credenciais fornecidas estão incorretas.'],
                 ]);
             }
 
@@ -62,13 +62,21 @@ class AuthController extends Controller
             $token = $user->createToken('auth_token')->plainTextToken;
 
             return response()->json([
+                "error" => false,
                 'message' => 'Logado com sucesso',
                 'token' => $token,
             ], 200);
+        } catch (ValidationException $e) {
+            return response()->json([
+                "error" => true,
+                "message" => $e->getMessage(),
+                "errors" => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
             Log::error("Erro no login", ["erro" => $e->getMessage()]);
             return response()->json([
-                "error" => "Erro ao fazer login" . $e->getMessage()
+                "error" => true,
+                "message" => "Erro interno. Tente novamente"
             ], 500);
         }
     }
